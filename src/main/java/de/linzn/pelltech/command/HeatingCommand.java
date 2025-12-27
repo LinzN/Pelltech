@@ -1,12 +1,13 @@
 /*
- * Copyright (C) 2020. Niklas Linz - All Rights Reserved
- * You may use, distribute and modify this code under the
- * terms of the LGPLv3 license, which unfortunately won't be
- * written for another century.
+ * Copyright (c) 2025 MirraNET, Niklas Linz. All rights reserved.
  *
- * You should have received a copy of the LGPLv3 license with
- * this file. If not, please write to: niklas.linz@enigmar.de
+ * This file is part of the MirraNET project and is licensed under the
+ * GNU Lesser General Public License v3.0 (LGPLv3).
  *
+ * You may use, distribute and modify this code under the terms
+ * of the LGPLv3 license. You should have received a copy of the
+ * license along with this file. If not, see <https://www.gnu.org/licenses/lgpl-3.0.html>
+ * or contact: niklas.linz@mirranet.de
  */
 
 package de.linzn.pelltech.command;
@@ -16,8 +17,8 @@ import de.linzn.pelltech.PelltechPlugin;
 import de.linzn.pelltech.objects.Inlet;
 import de.linzn.pelltech.objects.Notify;
 import de.linzn.pelltech.objects.Outlet;
-import de.stem.stemSystem.STEMSystemApp;
-import de.stem.stemSystem.modules.commandModule.ICommand;
+import de.linzn.stem.STEMApp;
+import de.linzn.stem.modules.commandModule.ICommand;
 
 import java.util.Date;
 import java.util.List;
@@ -42,28 +43,28 @@ public class HeatingCommand implements ICommand {
 
         long lastSync = (new Date().getTime() - PelltechPlugin.pelltechPlugin.heaterProcessor.getDate().getTime()) / 1000;
 
-        STEMSystemApp.LOGGER.LIVE("############################################");
-        STEMSystemApp.LOGGER.LIVE("## Inlets:");
-        STEMSystemApp.LOGGER.LIVE("############################################");
+        STEMApp.LOGGER.LIVE("############################################");
+        STEMApp.LOGGER.LIVE("## Inlets:");
+        STEMApp.LOGGER.LIVE("############################################");
         for (Inlet inlet : inlets) {
-            STEMSystemApp.LOGGER.LIVE(inlet.getName() + " status -> " + inlet.isHealth() + " value -> " + inlet.getValue());
+            STEMApp.LOGGER.LIVE(inlet.getName() + " status -> " + inlet.isHealth() + " value -> " + inlet.getValue());
         }
 
-        STEMSystemApp.LOGGER.LIVE("############################################");
-        STEMSystemApp.LOGGER.LIVE("## Outlets:");
-        STEMSystemApp.LOGGER.LIVE("############################################");
+        STEMApp.LOGGER.LIVE("############################################");
+        STEMApp.LOGGER.LIVE("## Outlets:");
+        STEMApp.LOGGER.LIVE("############################################");
         for (Outlet outlet : outlets) {
-            STEMSystemApp.LOGGER.LIVE(outlet.getName() + " active -> " + outlet.isActive());
+            STEMApp.LOGGER.LIVE(outlet.getName() + " active -> " + outlet.isActive());
         }
-        STEMSystemApp.LOGGER.LIVE("############################################");
-        STEMSystemApp.LOGGER.LIVE("## Notifies:");
-        STEMSystemApp.LOGGER.LIVE("############################################");
+        STEMApp.LOGGER.LIVE("############################################");
+        STEMApp.LOGGER.LIVE("## Notifies:");
+        STEMApp.LOGGER.LIVE("############################################");
         for (Notify notify : notifies) {
-            STEMSystemApp.LOGGER.LIVE(notify.getName() + " status -> " + notify.isActive());
+            STEMApp.LOGGER.LIVE(notify.getName() + " status -> " + notify.isActive());
         }
 
-        STEMSystemApp.LOGGER.LIVE("############################################");
-        STEMSystemApp.LOGGER.LIVE("## Last sync:");
-        STEMSystemApp.LOGGER.LIVE(lastSync + " seconds ago!");
+        STEMApp.LOGGER.LIVE("############################################");
+        STEMApp.LOGGER.LIVE("## Last sync:");
+        STEMApp.LOGGER.LIVE(lastSync + " seconds ago!");
     }
 }

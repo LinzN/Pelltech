@@ -1,22 +1,23 @@
 /*
- * Copyright (C) 2020. Niklas Linz - All Rights Reserved
- * You may use, distribute and modify this code under the
- * terms of the LGPLv3 license, which unfortunately won't be
- * written for another century.
+ * Copyright (c) 2025 MirraNET, Niklas Linz. All rights reserved.
  *
- * You should have received a copy of the LGPLv3 license with
- * this file. If not, please write to: niklas.linz@enigmar.de
+ * This file is part of the MirraNET project and is licensed under the
+ * GNU Lesser General Public License v3.0 (LGPLv3).
  *
+ * You may use, distribute and modify this code under the terms
+ * of the LGPLv3 license. You should have received a copy of the
+ * license along with this file. If not, see <https://www.gnu.org/licenses/lgpl-3.0.html>
+ * or contact: niklas.linz@mirranet.de
  */
 
 package de.linzn.pelltech.objects;
 
 
 import de.linzn.pelltech.PelltechPlugin;
-import de.stem.stemSystem.STEMSystemApp;
-import de.stem.stemSystem.modules.informationModule.InformationBlock;
-import de.stem.stemSystem.modules.informationModule.InformationIntent;
-import de.stem.stemSystem.modules.notificationModule.NotificationPriority;
+import de.linzn.stem.STEMApp;
+import de.linzn.stem.modules.informationModule.InformationBlock;
+import de.linzn.stem.modules.informationModule.InformationIntent;
+import de.linzn.stem.modules.notificationModule.NotificationPriority;
 
 public class Notify {
     private int index;
@@ -56,7 +57,7 @@ public class Notify {
         if (!oldValue) {
             if (this.active) {
                 String message = "New notify " + this.name.toUpperCase() + " with state ACTIVE is called!";
-                STEMSystemApp.getInstance().getNotificationModule().pushNotification(message, NotificationPriority.HIGH, PelltechPlugin.pelltechPlugin);
+                STEMApp.getInstance().getNotificationModule().pushNotification(message, NotificationPriority.HIGH, PelltechPlugin.pelltechPlugin);
 
                 if (this.informationBlock != null && this.informationBlock.isActive()) {
                     this.informationBlock.expire();
@@ -66,7 +67,7 @@ public class Notify {
                 this.informationBlock.setIcon("FIRE");
                 this.informationBlock.setExpireTime(-1L);
                 this.informationBlock.addIntent(InformationIntent.SHOW_DISPLAY);
-                STEMSystemApp.getInstance().getInformationModule().queueInformationBlock(informationBlock);
+                STEMApp.getInstance().getInformationModule().queueInformationBlock(informationBlock);
 
             } else {
                 if (this.informationBlock != null && this.informationBlock.isActive()) {

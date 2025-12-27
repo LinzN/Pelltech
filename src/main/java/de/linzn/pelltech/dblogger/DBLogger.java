@@ -1,12 +1,13 @@
 /*
- * Copyright (C) 2020. Niklas Linz - All Rights Reserved
- * You may use, distribute and modify this code under the
- * terms of the LGPLv3 license, which unfortunately won't be
- * written for another century.
+ * Copyright (c) 2025 MirraNET, Niklas Linz. All rights reserved.
  *
- * You should have received a copy of the LGPLv3 license with
- * this file. If not, please write to: niklas.linz@enigmar.de
+ * This file is part of the MirraNET project and is licensed under the
+ * GNU Lesser General Public License v3.0 (LGPLv3).
  *
+ * You may use, distribute and modify this code under the terms
+ * of the LGPLv3 license. You should have received a copy of the
+ * license along with this file. If not, see <https://www.gnu.org/licenses/lgpl-3.0.html>
+ * or contact: niklas.linz@mirranet.de
  */
 
 package de.linzn.pelltech.dblogger;
@@ -15,7 +16,7 @@ package de.linzn.pelltech.dblogger;
 import de.linzn.pelltech.objects.Inlet;
 import de.linzn.pelltech.objects.Notify;
 import de.linzn.pelltech.objects.Outlet;
-import de.stem.stemSystem.STEMSystemApp;
+import de.linzn.stem.STEMApp;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -29,7 +30,7 @@ public class DBLogger {
     public List<Inlet> loadInlets() {
         List<Inlet> inlets = new ArrayList<>();
         try {
-            Connection con = STEMSystemApp.getInstance().getDatabaseModule().getConnection();
+            Connection con = STEMApp.getInstance().getDatabaseModule().getConnection();
             Statement st = con.createStatement();
             String sqlquery = ("SELECT * FROM `addon_heater_inlets`");
             ResultSet rs = st.executeQuery(sqlquery);
@@ -39,9 +40,9 @@ public class DBLogger {
                 Inlet inlet = new Inlet(index, name);
                 inlets.add(inlet);
             }
-            STEMSystemApp.getInstance().getDatabaseModule().releaseConnection(con);
+            STEMApp.getInstance().getDatabaseModule().releaseConnection(con);
         } catch (SQLException e) {
-            STEMSystemApp.LOGGER.ERROR(e);
+            STEMApp.LOGGER.ERROR(e);
         }
         return inlets;
     }
@@ -49,7 +50,7 @@ public class DBLogger {
     public List<Outlet> loadOutlets() {
         List<Outlet> outlets = new ArrayList<>();
         try {
-            Connection con = STEMSystemApp.getInstance().getDatabaseModule().getConnection();
+            Connection con = STEMApp.getInstance().getDatabaseModule().getConnection();
             Statement st = con.createStatement();
             String sqlquery = ("SELECT * FROM `addon_heater_outlets`");
             ResultSet rs = st.executeQuery(sqlquery);
@@ -59,9 +60,9 @@ public class DBLogger {
                 Outlet outlet = new Outlet(index, name);
                 outlets.add(outlet);
             }
-            STEMSystemApp.getInstance().getDatabaseModule().releaseConnection(con);
+            STEMApp.getInstance().getDatabaseModule().releaseConnection(con);
         } catch (SQLException e) {
-            STEMSystemApp.LOGGER.ERROR(e);
+            STEMApp.LOGGER.ERROR(e);
         }
         return outlets;
     }
@@ -69,7 +70,7 @@ public class DBLogger {
     public List<Notify> loadNotifies() {
         List<Notify> notifies = new ArrayList<>();
         try {
-            Connection con = STEMSystemApp.getInstance().getDatabaseModule().getConnection();
+            Connection con = STEMApp.getInstance().getDatabaseModule().getConnection();
             Statement st = con.createStatement();
             String sqlquery = ("SELECT * FROM `addon_heater_notifies`");
             ResultSet rs = st.executeQuery(sqlquery);
@@ -79,16 +80,16 @@ public class DBLogger {
                 Notify notify = new Notify(index, name);
                 notifies.add(notify);
             }
-            STEMSystemApp.getInstance().getDatabaseModule().releaseConnection(con);
+            STEMApp.getInstance().getDatabaseModule().releaseConnection(con);
         } catch (SQLException e) {
-            STEMSystemApp.LOGGER.ERROR(e);
+            STEMApp.LOGGER.ERROR(e);
         }
         return notifies;
     }
 
     public void saveInlets(List<Inlet> inlets) {
         try {
-            Connection con = STEMSystemApp.getInstance().getDatabaseModule().getConnection();
+            Connection con = STEMApp.getInstance().getDatabaseModule().getConnection();
             Statement st = con.createStatement();
             for (Inlet inlet : inlets) {
                 String sqlquery = "SELECT `inlet_id` FROM `addon_heater_inlets` WHERE `index` = " + inlet.getIndex();
@@ -111,15 +112,15 @@ public class DBLogger {
                 sqlquery = "INSERT INTO `addon_heater_inlets_data` (`inlet_id`, `health`, `value`, `timestamp`) values ('" + inletID + "', '" + (inlet.isHealth() ? 1 : 0) + "', '" + inlet.getValue() + "', '" + inlet.getDate() + "')";
                 st.executeUpdate(sqlquery);
             }
-            STEMSystemApp.getInstance().getDatabaseModule().releaseConnection(con);
+            STEMApp.getInstance().getDatabaseModule().releaseConnection(con);
         } catch (SQLException e) {
-            STEMSystemApp.LOGGER.ERROR(e);
+            STEMApp.LOGGER.ERROR(e);
         }
     }
 
     public void saveOutlets(List<Outlet> outlets) {
         try {
-            Connection con = STEMSystemApp.getInstance().getDatabaseModule().getConnection();
+            Connection con = STEMApp.getInstance().getDatabaseModule().getConnection();
             Statement st = con.createStatement();
             for (Outlet outlet : outlets) {
                 String sqlquery = "SELECT `outlet_id` FROM `addon_heater_outlets` WHERE `index` = " + outlet.getIndex();
@@ -142,15 +143,15 @@ public class DBLogger {
                 sqlquery = "INSERT INTO `addon_heater_outlets_data` (`outlet_id`, `active`, `timestamp`) values ('" + outletID + "', '" + (outlet.isActive() ? 1 : 0) + "', '" + outlet.getDate() + "')";
                 st.executeUpdate(sqlquery);
             }
-            STEMSystemApp.getInstance().getDatabaseModule().releaseConnection(con);
+            STEMApp.getInstance().getDatabaseModule().releaseConnection(con);
         } catch (SQLException e) {
-            STEMSystemApp.LOGGER.ERROR(e);
+            STEMApp.LOGGER.ERROR(e);
         }
     }
 
     public void saveNotifies(List<Notify> notifies) {
         try {
-            Connection con = STEMSystemApp.getInstance().getDatabaseModule().getConnection();
+            Connection con = STEMApp.getInstance().getDatabaseModule().getConnection();
             Statement st = con.createStatement();
             for (Notify notify : notifies) {
                 String sqlquery = "SELECT `notify_id` FROM `addon_heater_notifies` WHERE `index` = " + notify.getIndex();
@@ -173,9 +174,9 @@ public class DBLogger {
                 sqlquery = "INSERT INTO `addon_heater_notifies_data` (`notify_id`, `active`, `timestamp`) values ('" + notifyID + "', '" + (notify.isActive() ? 1 : 0) + "', '" + notify.getDate() + "')";
                 st.executeUpdate(sqlquery);
             }
-            STEMSystemApp.getInstance().getDatabaseModule().releaseConnection(con);
+            STEMApp.getInstance().getDatabaseModule().releaseConnection(con);
         } catch (SQLException e) {
-            STEMSystemApp.LOGGER.ERROR(e);
+            STEMApp.LOGGER.ERROR(e);
         }
     }
 }

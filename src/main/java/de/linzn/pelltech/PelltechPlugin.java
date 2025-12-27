@@ -1,12 +1,13 @@
 /*
- * Copyright (C) 2020. Niklas Linz - All Rights Reserved
- * You may use, distribute and modify this code under the
- * terms of the LGPLv3 license, which unfortunately won't be
- * written for another century.
+ * Copyright (c) 2025 MirraNET, Niklas Linz. All rights reserved.
  *
- * You should have received a copy of the LGPLv3 license with
- * this file. If not, please write to: niklas.linz@enigmar.de
+ * This file is part of the MirraNET project and is licensed under the
+ * GNU Lesser General Public License v3.0 (LGPLv3).
  *
+ * You may use, distribute and modify this code under the terms
+ * of the LGPLv3 license. You should have received a copy of the
+ * license along with this file. If not, see <https://www.gnu.org/licenses/lgpl-3.0.html>
+ * or contact: niklas.linz@mirranet.de
  */
 
 package de.linzn.pelltech;
@@ -15,12 +16,9 @@ package de.linzn.pelltech;
 import de.linzn.pelltech.command.HeatingCommand;
 import de.linzn.pelltech.data.HeaterCallback;
 import de.linzn.pelltech.dblogger.DBLogger;
-import de.linzn.pelltech.restfulapi.GET_HeaterData;
-import de.linzn.pelltech.restfulapi.GET_Notification;
 import de.linzn.pelltech.webApi.WebApiHandler;
-import de.linzn.restfulapi.RestFulApiPlugin;
-import de.stem.stemSystem.STEMSystemApp;
-import de.stem.stemSystem.modules.pluginModule.STEMPlugin;
+import de.linzn.stem.STEMApp;
+import de.linzn.stem.modules.pluginModule.STEMPlugin;
 
 
 public class PelltechPlugin extends STEMPlugin {
@@ -38,11 +36,9 @@ public class PelltechPlugin extends STEMPlugin {
 
     @Override
     public void onEnable() {
-        STEMSystemApp.getInstance().getCallBackService().registerCallbackListener(new HeaterCallback(), this);
-        STEMSystemApp.getInstance().getCommandModule().registerCommand("heating", new HeatingCommand());
-        STEMSystemApp.getInstance().getMqttModule().subscribe("uvr/canbus/data", new MqttCanbusListener());
-        RestFulApiPlugin.restFulApiPlugin.registerIGetJSONClass(new GET_HeaterData(this));
-        RestFulApiPlugin.restFulApiPlugin.registerIGetJSONClass(new GET_Notification(this));
+        STEMApp.getInstance().getCallBackService().registerCallbackListener(new HeaterCallback(), this);
+        STEMApp.getInstance().getCommandModule().registerCommand("heating", new HeatingCommand());
+        STEMApp.getInstance().getMqttModule().subscribe("uvr/canbus/data", new MqttCanbusListener());
         this.webApiHandler = new WebApiHandler(this);
     }
 
