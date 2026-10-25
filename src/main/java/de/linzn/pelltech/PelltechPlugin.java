@@ -12,14 +12,11 @@
 
 package de.linzn.pelltech;
 
-
 import de.linzn.pelltech.command.HeatingCommand;
 import de.linzn.pelltech.data.HeaterCallback;
 import de.linzn.pelltech.dblogger.DBLogger;
 import de.linzn.pelltech.webApi.WebApiHandler;
-import de.linzn.stem.STEMApp;
 import de.linzn.stem.modules.pluginModule.STEMPlugin;
-
 
 public class PelltechPlugin extends STEMPlugin {
 
@@ -30,19 +27,22 @@ public class PelltechPlugin extends STEMPlugin {
 
     public PelltechPlugin() {
         pelltechPlugin = this;
-        dbLogger = new DBLogger();
-        heaterProcessor = new HeaterProcessor2();
     }
 
     @Override
     public void onEnable() {
-        STEMApp.getInstance().getCallBackService().registerCallbackListener(new HeaterCallback(), this);
-        STEMApp.getInstance().getCommandModule().registerCommand("heating", new HeatingCommand());
-        STEMApp.getInstance().getMqttModule().subscribe("uvr/canbus/data", new MqttCanbusListener());
+        this.dbLogger = new DBLogger();
+        this.heaterProcessor = new HeaterProcessor2();
+        this.getStemApi().scheduler().registerCallback(new HeaterCallback());
+        this.getStemApi().commands().register("heating", new HeatingCommand());
+        this.getStemApi().mqtt().subscribe("uvr/canbus/data", new MqttCanbusListener());
         this.webApiHandler = new WebApiHandler(this);
     }
 
     @Override
     public void onDisable() {
+        if (this.webApiHandler != null) {
+            this.webApiHandler.disable();
+        }
     }
 }

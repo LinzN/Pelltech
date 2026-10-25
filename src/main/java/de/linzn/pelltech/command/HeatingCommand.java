@@ -17,7 +17,6 @@ import de.linzn.pelltech.PelltechPlugin;
 import de.linzn.pelltech.objects.Inlet;
 import de.linzn.pelltech.objects.Notify;
 import de.linzn.pelltech.objects.Outlet;
-import de.linzn.stem.STEMApp;
 import de.linzn.stem.modules.commandModule.ICommand;
 
 import java.util.Date;
@@ -33,7 +32,7 @@ public class HeatingCommand implements ICommand {
                 status();
             }
         }
-        return false;
+        return true;
     }
 
     private void status() {
@@ -41,30 +40,31 @@ public class HeatingCommand implements ICommand {
         List<Outlet> outlets = PelltechPlugin.pelltechPlugin.heaterProcessor.getOutletsList();
         List<Notify> notifies = PelltechPlugin.pelltechPlugin.heaterProcessor.getNotifiesList();
 
-        long lastSync = (new Date().getTime() - PelltechPlugin.pelltechPlugin.heaterProcessor.getDate().getTime()) / 1000;
+        Date lastSyncDate = PelltechPlugin.pelltechPlugin.heaterProcessor.getDate();
+        String lastSync = lastSyncDate == null ? "never" : ((System.currentTimeMillis() - lastSyncDate.getTime()) / 1000) + " seconds ago!";
 
-        STEMApp.LOGGER.LIVE("############################################");
-        STEMApp.LOGGER.LIVE("## Inlets:");
-        STEMApp.LOGGER.LIVE("############################################");
+        PelltechPlugin.pelltechPlugin.getPluginLogger().info("############################################");
+        PelltechPlugin.pelltechPlugin.getPluginLogger().info("## Inlets:");
+        PelltechPlugin.pelltechPlugin.getPluginLogger().info("############################################");
         for (Inlet inlet : inlets) {
-            STEMApp.LOGGER.LIVE(inlet.getName() + " status -> " + inlet.isHealth() + " value -> " + inlet.getValue());
+            PelltechPlugin.pelltechPlugin.getPluginLogger().info(inlet.getName() + " status -> " + inlet.isHealth() + " value -> " + inlet.getValue());
         }
 
-        STEMApp.LOGGER.LIVE("############################################");
-        STEMApp.LOGGER.LIVE("## Outlets:");
-        STEMApp.LOGGER.LIVE("############################################");
+        PelltechPlugin.pelltechPlugin.getPluginLogger().info("############################################");
+        PelltechPlugin.pelltechPlugin.getPluginLogger().info("## Outlets:");
+        PelltechPlugin.pelltechPlugin.getPluginLogger().info("############################################");
         for (Outlet outlet : outlets) {
-            STEMApp.LOGGER.LIVE(outlet.getName() + " active -> " + outlet.isActive());
+            PelltechPlugin.pelltechPlugin.getPluginLogger().info(outlet.getName() + " active -> " + outlet.isActive());
         }
-        STEMApp.LOGGER.LIVE("############################################");
-        STEMApp.LOGGER.LIVE("## Notifies:");
-        STEMApp.LOGGER.LIVE("############################################");
+        PelltechPlugin.pelltechPlugin.getPluginLogger().info("############################################");
+        PelltechPlugin.pelltechPlugin.getPluginLogger().info("## Notifies:");
+        PelltechPlugin.pelltechPlugin.getPluginLogger().info("############################################");
         for (Notify notify : notifies) {
-            STEMApp.LOGGER.LIVE(notify.getName() + " status -> " + notify.isActive());
+            PelltechPlugin.pelltechPlugin.getPluginLogger().info(notify.getName() + " status -> " + notify.isActive());
         }
 
-        STEMApp.LOGGER.LIVE("############################################");
-        STEMApp.LOGGER.LIVE("## Last sync:");
-        STEMApp.LOGGER.LIVE(lastSync + " seconds ago!");
+        PelltechPlugin.pelltechPlugin.getPluginLogger().info("############################################");
+        PelltechPlugin.pelltechPlugin.getPluginLogger().info("## Last sync:");
+        PelltechPlugin.pelltechPlugin.getPluginLogger().info(lastSync);
     }
 }

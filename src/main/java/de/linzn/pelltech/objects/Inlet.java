@@ -16,11 +16,11 @@ package de.linzn.pelltech.objects;
 import de.linzn.openJL.math.FloatingPoint;
 
 public class Inlet {
-    private int index;
-    private String name;
-    private boolean health;
-    private double value;
-    private long date;
+    private final int index;
+    private final String name;
+    private volatile boolean health;
+    private volatile double value;
+    private volatile long date;
 
     public Inlet(int index, String name) {
         this.index = index;

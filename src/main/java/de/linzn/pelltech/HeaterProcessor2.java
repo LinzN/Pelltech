@@ -12,7 +12,6 @@
 
 package de.linzn.pelltech;
 
-
 import de.linzn.pelltech.objects.Inlet;
 import de.linzn.pelltech.objects.Notify;
 import de.linzn.pelltech.objects.Outlet;
@@ -22,98 +21,85 @@ import org.json.JSONObject;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * Applies canbus data to the configured inlets, outlets and notifies.
+ */
 public class HeaterProcessor2 {
-    private List<Inlet> inletsList;
-    private List<Outlet> outletsList;
-    private List<Notify> notifiesList;
-    private Date date;
+    private final List<Inlet> inletsList;
+    private final List<Outlet> outletsList;
+    private final List<Notify> notifiesList;
+    private volatile Date date;
 
     public HeaterProcessor2() {
-        this.loadData();
+        this.inletsList = List.copyOf(PelltechPlugin.pelltechPlugin.dbLogger.loadInlets());
+        this.outletsList = List.copyOf(PelltechPlugin.pelltechPlugin.dbLogger.loadOutlets());
+        this.notifiesList = List.copyOf(PelltechPlugin.pelltechPlugin.dbLogger.loadNotifies());
     }
 
-    private void loadData() {
-        this.inletsList = PelltechPlugin.pelltechPlugin.dbLogger.loadInlets();
-        this.outletsList = PelltechPlugin.pelltechPlugin.dbLogger.loadOutlets();
-        this.notifiesList = PelltechPlugin.pelltechPlugin.dbLogger.loadNotifies();
-    }
-
-    public void process(JSONObject rawJsonObject) {
-        JSONArray inlets = rawJsonObject.getJSONArray("inlets");
-        this.updateInlets(inlets);
-        JSONArray outlets = rawJsonObject.getJSONArray("outlets");
-        this.updateOutlets(outlets);
-        JSONArray notifies = rawJsonObject.getJSONArray("notifies");
-        this.updateNotifies(notifies);
+    public synchronized void process(JSONObject rawJsonObject) {
+        JSONArray inlets = rawJsonObject.optJSONArray("inlets");
+        if (inlets != null) {
+            this.updateInlets(inlets);
+        }
+        JSONArray outlets = rawJsonObject.optJSONArray("outlets");
+        if (outlets != null) {
+            this.updateOutlets(outlets);
+        }
+        JSONArray notifies = rawJsonObject.optJSONArray("notifies");
+        if (notifies != null) {
+            this.updateNotifies(notifies);
+        }
         this.date = new Date();
     }
 
     private void updateInlets(JSONArray inlets) {
         for (int i = 0; i < inlets.length(); i++) {
-            JSONObject jsonInlet = inlets.getJSONObject(i);
-
-            int index = jsonInlet.getInt("index");
-            boolean health = jsonInlet.getString("state").equalsIgnoreCase("OK");
-            double value = jsonInlet.getDouble("value");
-
-            /* Get inlet from list*/
-            Inlet inlet = null;
-            for (Inlet tempInlet : inletsList) {
-                if (tempInlet.getIndex() == index) {
-                    inlet = tempInlet;
+            JSONObject jsonInlet = inlets.optJSONObject(i);
+            if (jsonInlet == null || !jsonInlet.has("index")) {
+                continue;
+            }
+            int index = jsonInlet.optInt("index");
+            boolean health = jsonInlet.optString("state").equalsIgnoreCase("OK");
+            double value = jsonInlet.optDouble("value", 0D);
+            for (Inlet inlet : inletsList) {
+                if (inlet.getIndex() == index) {
+                    inlet.update(health, value);
                     break;
                 }
-            }
-
-            /* Update inlet with new data */
-            if (inlet != null) {
-                inlet.update(health, value);
             }
         }
     }
 
     private void updateOutlets(JSONArray outlets) {
         for (int i = 0; i < outlets.length(); i++) {
-            JSONObject jsonOutlet = outlets.getJSONObject(i);
-
-            int index = jsonOutlet.getInt("index");
-            boolean active = jsonOutlet.getString("value").equalsIgnoreCase("EIN");
-
-            /* Get outlet from list*/
-            Outlet outlet = null;
-            for (Outlet tempOutlet : outletsList) {
-                if (tempOutlet.getIndex() == index) {
-                    outlet = tempOutlet;
+            JSONObject jsonOutlet = outlets.optJSONObject(i);
+            if (jsonOutlet == null || !jsonOutlet.has("index")) {
+                continue;
+            }
+            int index = jsonOutlet.optInt("index");
+            boolean active = jsonOutlet.optString("value").equalsIgnoreCase("EIN");
+            for (Outlet outlet : outletsList) {
+                if (outlet.getIndex() == index) {
+                    outlet.update(active);
                     break;
                 }
-            }
-
-            /* Update outlet with new data */
-            if (outlet != null) {
-                outlet.update(active);
             }
         }
     }
 
     private void updateNotifies(JSONArray notifies) {
         for (int i = 0; i < notifies.length(); i++) {
-            JSONObject jsonNotifies = notifies.getJSONObject(i);
-
-            int index = jsonNotifies.getInt("index");
-            boolean active = jsonNotifies.getString("state").equalsIgnoreCase("EIN");
-
-            /* Get notify from list*/
-            Notify notify = null;
-            for (Notify tempNotify : notifiesList) {
-                if (tempNotify.getIndex() == index) {
-                    notify = tempNotify;
+            JSONObject jsonNotifies = notifies.optJSONObject(i);
+            if (jsonNotifies == null || !jsonNotifies.has("index")) {
+                continue;
+            }
+            int index = jsonNotifies.optInt("index");
+            boolean active = jsonNotifies.optString("state").equalsIgnoreCase("EIN");
+            for (Notify notify : notifiesList) {
+                if (notify.getIndex() == index) {
+                    notify.update(active);
                     break;
                 }
-            }
-
-            /* Update notify with new data */
-            if (notify != null) {
-                notify.update(active);
             }
         }
     }

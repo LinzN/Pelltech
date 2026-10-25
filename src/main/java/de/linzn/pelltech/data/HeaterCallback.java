@@ -12,8 +12,7 @@
 
 package de.linzn.pelltech.data;
 
-
-import de.linzn.stem.STEMApp;
+import de.linzn.pelltech.PelltechPlugin;
 import de.linzn.stem.taskManagment.AbstractCallback;
 import de.linzn.stem.taskManagment.CallbackTime;
 import de.linzn.stem.taskManagment.operations.OperationOutput;
@@ -21,20 +20,19 @@ import de.linzn.stem.taskManagment.operations.OperationOutput;
 import java.util.concurrent.TimeUnit;
 
 public class HeaterCallback extends AbstractCallback {
+
     @Override
     public void operation() {
-        HeaterRequestOperation heaterRequestOperation = new HeaterRequestOperation();
-        addOperationData(heaterRequestOperation);
+        addOperationData(new HeaterRequestOperation());
     }
 
     @Override
     public void callback(OperationOutput operationOutput) {
-        STEMApp.LOGGER.DEBUG("Heating data request send");
+        PelltechPlugin.pelltechPlugin.getPluginLogger().debug("Heating data request send");
     }
 
     @Override
     public CallbackTime getTime() {
         return new CallbackTime(1, 3, TimeUnit.MINUTES);
     }
-
 }

@@ -13,10 +13,10 @@
 package de.linzn.pelltech.objects;
 
 public class Outlet {
-    private int index;
-    private String name;
-    private boolean active;
-    private long date;
+    private final int index;
+    private final String name;
+    private volatile boolean active;
+    private volatile long date;
 
     public Outlet(int index, String name) {
         this.index = index;

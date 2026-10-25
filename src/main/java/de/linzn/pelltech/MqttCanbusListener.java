@@ -13,18 +13,25 @@
 package de.linzn.pelltech;
 
 import de.linzn.pelltech.events.MQTTCanbusReceiveEvent;
-import de.linzn.stem.STEMApp;
-import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
-import org.eclipse.paho.client.mqttv3.MqttMessage;
+import de.linzn.stem.api.mqtt.MqttHandler;
+import org.json.JSONException;
 import org.json.JSONObject;
 
-public class MqttCanbusListener implements IMqttMessageListener {
-    @Override
-    public void messageArrived(String s, MqttMessage mqttMessage) {
-        JSONObject jsonPayload = new JSONObject(new String(mqttMessage.getPayload()));
-        MQTTCanbusReceiveEvent mqttCanbusReceiveEvent = new MQTTCanbusReceiveEvent(jsonPayload);
-        STEMApp.getInstance().getEventModule().getStemEventBus().fireEvent(mqttCanbusReceiveEvent);
+import java.nio.charset.StandardCharsets;
 
+public class MqttCanbusListener implements MqttHandler {
+
+    @Override
+    public void onMessage(String topic, byte[] payload) {
+        JSONObject jsonPayload;
+        try {
+            jsonPayload = new JSONObject(new String(payload, StandardCharsets.UTF_8));
+        } catch (JSONException e) {
+            PelltechPlugin.pelltechPlugin.getPluginLogger().warning("Invalid canbus payload on " + topic);
+            return;
+        }
+        MQTTCanbusReceiveEvent mqttCanbusReceiveEvent = new MQTTCanbusReceiveEvent(jsonPayload);
+        PelltechPlugin.pelltechPlugin.getStemApi().events().fire(mqttCanbusReceiveEvent);
         if (!mqttCanbusReceiveEvent.isCanceled()) {
             PelltechPlugin.pelltechPlugin.heaterProcessor.process(jsonPayload);
         }

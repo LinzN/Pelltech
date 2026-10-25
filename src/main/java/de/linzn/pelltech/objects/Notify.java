@@ -14,16 +14,15 @@ package de.linzn.pelltech.objects;
 
 
 import de.linzn.pelltech.PelltechPlugin;
-import de.linzn.stem.STEMApp;
 import de.linzn.stem.modules.informationModule.InformationBlock;
 import de.linzn.stem.modules.informationModule.InformationIntent;
 import de.linzn.stem.modules.notificationModule.NotificationPriority;
 
 public class Notify {
-    private int index;
-    private String name;
-    private boolean active;
-    private long date;
+    private final int index;
+    private final String name;
+    private volatile boolean active;
+    private volatile long date;
 
     private InformationBlock informationBlock = null;
 
@@ -34,7 +33,7 @@ public class Notify {
         this.date = System.currentTimeMillis();
     }
 
-    public void update(boolean active) {
+    public synchronized void update(boolean active) {
         boolean oldValue = this.active;
         this.active = active;
         this.date = System.currentTimeMillis();
@@ -57,7 +56,7 @@ public class Notify {
         if (!oldValue) {
             if (this.active) {
                 String message = "New notify " + this.name.toUpperCase() + " with state ACTIVE is called!";
-                STEMApp.getInstance().getNotificationModule().pushNotification(message, NotificationPriority.HIGH, PelltechPlugin.pelltechPlugin);
+                PelltechPlugin.pelltechPlugin.getStemApi().notifications().push(message, NotificationPriority.HIGH);
 
                 if (this.informationBlock != null && this.informationBlock.isActive()) {
                     this.informationBlock.expire();
@@ -67,7 +66,7 @@ public class Notify {
                 this.informationBlock.setIcon("FIRE");
                 this.informationBlock.setExpireTime(-1L);
                 this.informationBlock.addIntent(InformationIntent.SHOW_DISPLAY);
-                STEMApp.getInstance().getInformationModule().queueInformationBlock(informationBlock);
+                PelltechPlugin.pelltechPlugin.getStemApi().information().queue(informationBlock);
 
             } else {
                 if (this.informationBlock != null && this.informationBlock.isActive()) {

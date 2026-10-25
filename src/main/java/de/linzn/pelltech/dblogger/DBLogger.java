@@ -12,171 +12,139 @@
 
 package de.linzn.pelltech.dblogger;
 
-
+import de.linzn.pelltech.PelltechPlugin;
 import de.linzn.pelltech.objects.Inlet;
 import de.linzn.pelltech.objects.Notify;
 import de.linzn.pelltech.objects.Outlet;
-import de.linzn.stem.STEMApp;
 
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Database access for heater configuration and history. All statements are prepared and closed,
+ * connections are always released.
+ */
 public class DBLogger {
 
-    public List<Inlet> loadInlets() {
-        List<Inlet> inlets = new ArrayList<>();
+    private interface RowMapper<T> {
+        T map(ResultSet rs) throws SQLException;
+    }
+
+    private <T> List<T> loadAll(String table, RowMapper<T> mapper) {
+        List<T> result = new ArrayList<>();
         try {
-            Connection con = STEMApp.getInstance().getDatabaseModule().getConnection();
-            Statement st = con.createStatement();
-            String sqlquery = ("SELECT * FROM `addon_heater_inlets`");
-            ResultSet rs = st.executeQuery(sqlquery);
-            while (rs.next()) {
-                int index = rs.getInt("index");
-                String name = rs.getString("name");
-                Inlet inlet = new Inlet(index, name);
-                inlets.add(inlet);
-            }
-            STEMApp.getInstance().getDatabaseModule().releaseConnection(con);
+            PelltechPlugin.pelltechPlugin.getStemApi().data().withConnection(connection -> {
+                try (PreparedStatement st = connection.prepareStatement("SELECT * FROM `" + table + "`");
+                     ResultSet rs = st.executeQuery()) {
+                    while (rs.next()) {
+                        result.add(mapper.map(rs));
+                    }
+                }
+                return null;
+            });
         } catch (SQLException e) {
-            STEMApp.LOGGER.ERROR(e);
+            PelltechPlugin.pelltechPlugin.getPluginLogger().error("Could not load " + table, e);
         }
-        return inlets;
+        return result;
+    }
+
+    public List<Inlet> loadInlets() {
+        return loadAll("addon_heater_inlets", rs -> new Inlet(rs.getInt("index"), rs.getString("name")));
     }
 
     public List<Outlet> loadOutlets() {
-        List<Outlet> outlets = new ArrayList<>();
-        try {
-            Connection con = STEMApp.getInstance().getDatabaseModule().getConnection();
-            Statement st = con.createStatement();
-            String sqlquery = ("SELECT * FROM `addon_heater_outlets`");
-            ResultSet rs = st.executeQuery(sqlquery);
-            while (rs.next()) {
-                int index = rs.getInt("index");
-                String name = rs.getString("name");
-                Outlet outlet = new Outlet(index, name);
-                outlets.add(outlet);
-            }
-            STEMApp.getInstance().getDatabaseModule().releaseConnection(con);
-        } catch (SQLException e) {
-            STEMApp.LOGGER.ERROR(e);
-        }
-        return outlets;
+        return loadAll("addon_heater_outlets", rs -> new Outlet(rs.getInt("index"), rs.getString("name")));
     }
 
     public List<Notify> loadNotifies() {
-        List<Notify> notifies = new ArrayList<>();
-        try {
-            Connection con = STEMApp.getInstance().getDatabaseModule().getConnection();
-            Statement st = con.createStatement();
-            String sqlquery = ("SELECT * FROM `addon_heater_notifies`");
-            ResultSet rs = st.executeQuery(sqlquery);
-            while (rs.next()) {
-                int index = rs.getInt("index");
-                String name = rs.getString("name");
-                Notify notify = new Notify(index, name);
-                notifies.add(notify);
+        return loadAll("addon_heater_notifies", rs -> new Notify(rs.getInt("index"), rs.getString("name")));
+    }
+
+    /**
+     * Find the id of an entry by index; the entry is created if it does not exist.
+     */
+    private static int resolveId(Connection connection, String table, String idColumn, int index, String name) throws SQLException {
+        String select = "SELECT `" + idColumn + "` FROM `" + table + "` WHERE `index` = ?";
+        try (PreparedStatement st = connection.prepareStatement(select)) {
+            st.setInt(1, index);
+            try (ResultSet rs = st.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(idColumn);
+                }
             }
-            STEMApp.getInstance().getDatabaseModule().releaseConnection(con);
-        } catch (SQLException e) {
-            STEMApp.LOGGER.ERROR(e);
         }
-        return notifies;
+        try (PreparedStatement insert = connection.prepareStatement("INSERT INTO `" + table + "` (`index`, `name`) VALUES (?, ?)")) {
+            insert.setInt(1, index);
+            insert.setString(2, name);
+            insert.executeUpdate();
+        }
+        try (PreparedStatement st = connection.prepareStatement(select)) {
+            st.setInt(1, index);
+            try (ResultSet rs = st.executeQuery()) {
+                return rs.next() ? rs.getInt(idColumn) : -1;
+            }
+        }
     }
 
     public void saveInlets(List<Inlet> inlets) {
         try {
-            Connection con = STEMApp.getInstance().getDatabaseModule().getConnection();
-            Statement st = con.createStatement();
-            for (Inlet inlet : inlets) {
-                String sqlquery = "SELECT `inlet_id` FROM `addon_heater_inlets` WHERE `index` = " + inlet.getIndex();
-                int inletID = -1;
-                ResultSet rs = st.executeQuery(sqlquery);
-                if (rs.next()) {
-                    inletID = rs.getInt("inlet_id");
-                } else {
-                    sqlquery = "INSERT INTO `addon_heater_inlets` (`index`, `name`) values ('" + inlet.getIndex() + "', '" + inlet.getName() + "')";
-                    st.executeUpdate(sqlquery);
-
-                    sqlquery = "SELECT `inlet_id` FROM `addon_heater_inlets` WHERE `index` = " + inlet.getIndex();
-                    rs = st.executeQuery(sqlquery);
-                    if (rs.next()) {
-                        inletID = rs.getInt("inlet_id");
+            PelltechPlugin.pelltechPlugin.getStemApi().data().withConnection(connection -> {
+                for (Inlet inlet : inlets) {
+                    int inletID = resolveId(connection, "addon_heater_inlets", "inlet_id", inlet.getIndex(), inlet.getName());
+                    try (PreparedStatement st = connection.prepareStatement("INSERT INTO `addon_heater_inlets_data` (`inlet_id`, `health`, `value`, `timestamp`) VALUES (?, ?, ?, ?)")) {
+                        st.setInt(1, inletID);
+                        st.setInt(2, inlet.isHealth() ? 1 : 0);
+                        st.setDouble(3, inlet.getValue());
+                        st.setLong(4, inlet.getDate());
+                        st.executeUpdate();
                     }
                 }
-
-                /* Add data */
-                sqlquery = "INSERT INTO `addon_heater_inlets_data` (`inlet_id`, `health`, `value`, `timestamp`) values ('" + inletID + "', '" + (inlet.isHealth() ? 1 : 0) + "', '" + inlet.getValue() + "', '" + inlet.getDate() + "')";
-                st.executeUpdate(sqlquery);
-            }
-            STEMApp.getInstance().getDatabaseModule().releaseConnection(con);
+                return null;
+            });
         } catch (SQLException e) {
-            STEMApp.LOGGER.ERROR(e);
+            PelltechPlugin.pelltechPlugin.getPluginLogger().error("Could not save inlets", e);
         }
     }
 
     public void saveOutlets(List<Outlet> outlets) {
         try {
-            Connection con = STEMApp.getInstance().getDatabaseModule().getConnection();
-            Statement st = con.createStatement();
-            for (Outlet outlet : outlets) {
-                String sqlquery = "SELECT `outlet_id` FROM `addon_heater_outlets` WHERE `index` = " + outlet.getIndex();
-                int outletID = -1;
-                ResultSet rs = st.executeQuery(sqlquery);
-                if (rs.next()) {
-                    outletID = rs.getInt("outlet_id");
-                } else {
-                    sqlquery = "INSERT INTO `addon_heater_outlets` (`index`, `name`) values ('" + outlet.getIndex() + "', '" + outlet.getName() + "')";
-                    st.executeUpdate(sqlquery);
-
-                    sqlquery = "SELECT `outlet_id` FROM `addon_heater_outlets` WHERE `index` = " + outlet.getIndex();
-                    rs = st.executeQuery(sqlquery);
-                    if (rs.next()) {
-                        outletID = rs.getInt("outlet_id");
+            PelltechPlugin.pelltechPlugin.getStemApi().data().withConnection(connection -> {
+                for (Outlet outlet : outlets) {
+                    int outletID = resolveId(connection, "addon_heater_outlets", "outlet_id", outlet.getIndex(), outlet.getName());
+                    try (PreparedStatement st = connection.prepareStatement("INSERT INTO `addon_heater_outlets_data` (`outlet_id`, `active`, `timestamp`) VALUES (?, ?, ?)")) {
+                        st.setInt(1, outletID);
+                        st.setInt(2, outlet.isActive() ? 1 : 0);
+                        st.setLong(3, outlet.getDate());
+                        st.executeUpdate();
                     }
                 }
-
-                /* Add data */
-                sqlquery = "INSERT INTO `addon_heater_outlets_data` (`outlet_id`, `active`, `timestamp`) values ('" + outletID + "', '" + (outlet.isActive() ? 1 : 0) + "', '" + outlet.getDate() + "')";
-                st.executeUpdate(sqlquery);
-            }
-            STEMApp.getInstance().getDatabaseModule().releaseConnection(con);
+                return null;
+            });
         } catch (SQLException e) {
-            STEMApp.LOGGER.ERROR(e);
+            PelltechPlugin.pelltechPlugin.getPluginLogger().error("Could not save outlets", e);
         }
     }
 
     public void saveNotifies(List<Notify> notifies) {
         try {
-            Connection con = STEMApp.getInstance().getDatabaseModule().getConnection();
-            Statement st = con.createStatement();
-            for (Notify notify : notifies) {
-                String sqlquery = "SELECT `notify_id` FROM `addon_heater_notifies` WHERE `index` = " + notify.getIndex();
-                int notifyID = -1;
-                ResultSet rs = st.executeQuery(sqlquery);
-                if (rs.next()) {
-                    notifyID = rs.getInt("notify_id");
-                } else {
-                    sqlquery = "INSERT INTO `addon_heater_notifies` (`index`, `name`) values ('" + notify.getIndex() + "', '" + notify.getName() + "')";
-                    st.executeUpdate(sqlquery);
-
-                    sqlquery = "SELECT `notify_id` FROM `addon_heater_notifies` WHERE `index` = " + notify.getIndex();
-                    rs = st.executeQuery(sqlquery);
-                    if (rs.next()) {
-                        notifyID = rs.getInt("notify_id");
+            PelltechPlugin.pelltechPlugin.getStemApi().data().withConnection(connection -> {
+                for (Notify notify : notifies) {
+                    int notifyID = resolveId(connection, "addon_heater_notifies", "notify_id", notify.getIndex(), notify.getName());
+                    try (PreparedStatement st = connection.prepareStatement("INSERT INTO `addon_heater_notifies_data` (`notify_id`, `active`, `timestamp`) VALUES (?, ?, ?)")) {
+                        st.setInt(1, notifyID);
+                        st.setInt(2, notify.isActive() ? 1 : 0);
+                        st.setLong(3, notify.getDate());
+                        st.executeUpdate();
                     }
                 }
-
-                /* Add data */
-                sqlquery = "INSERT INTO `addon_heater_notifies_data` (`notify_id`, `active`, `timestamp`) values ('" + notifyID + "', '" + (notify.isActive() ? 1 : 0) + "', '" + notify.getDate() + "')";
-                st.executeUpdate(sqlquery);
-            }
-            STEMApp.getInstance().getDatabaseModule().releaseConnection(con);
+                return null;
+            });
         } catch (SQLException e) {
-            STEMApp.LOGGER.ERROR(e);
+            PelltechPlugin.pelltechPlugin.getPluginLogger().error("Could not save notifies", e);
         }
     }
 }

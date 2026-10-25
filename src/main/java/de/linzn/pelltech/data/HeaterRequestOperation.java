@@ -12,7 +12,7 @@
 
 package de.linzn.pelltech.data;
 
-
+import de.linzn.pelltech.PelltechPlugin;
 import de.linzn.stem.STEMApp;
 import de.linzn.stem.taskManagment.operations.AbstractOperation;
 import de.linzn.stem.taskManagment.operations.OperationOutput;
@@ -21,21 +21,27 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
+/**
+ * Asks the connected StemLink clients for new heater data.
+ */
 public class HeaterRequestOperation extends AbstractOperation {
 
     @Override
     public OperationOutput runOperation() {
         OperationOutput operationOutput = new OperationOutput(this);
         ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream);
-        try {
+        try (DataOutputStream dataOutputStream = new DataOutputStream(byteArrayOutputStream)) {
             dataOutputStream.writeUTF("request");
-            operationOutput.setExit(0);
         } catch (IOException e) {
-            STEMApp.LOGGER.ERROR(e);
+            PelltechPlugin.pelltechPlugin.getPluginLogger().error(e);
             operationOutput.setExit(-1);
+            return operationOutput;
         }
-        STEMApp.getInstance().getStemLinkModule().getStemLinkServer().getClients().values().forEach(serverConnection -> serverConnection.writeOutput("heater_data", byteArrayOutputStream.toByteArray()));
+        /* StemLink is not part of the plugin API, so the core is used directly */
+        byte[] data = byteArrayOutputStream.toByteArray();
+        STEMApp.getInstance().getStemLinkModule().getStemLinkServer().getClients().values()
+                .forEach(serverConnection -> serverConnection.writeOutput("heater_data", data));
+        operationOutput.setExit(0);
         return operationOutput;
     }
 }
