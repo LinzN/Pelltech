@@ -14,7 +14,8 @@ raises a high priority notification as soon as the heating reports a new error.
 
 - Receives CAN bus data on the MQTT topic `uvr/canbus/data`
 - Asks connected StemLink clients for new data every 3 minutes (channel `heater_data`)
-- Inlets (sensor values), outlets (on/off) and notifies (error messages) are defined in the database
+- Inlets (sensor values), outlets (on/off) and notifies (error messages) are defined in the database;
+  indexes the CAN bus sends that are not defined yet are added automatically
 - New active notify: notification with priority `HIGH` and an information block on the display
 - `MQTTCanbusReceiveEvent` is fired for every message and can be canceled by other plugins
 
@@ -34,7 +35,8 @@ raises a high priority notification as soon as the heating reports a new error.
 
 1. Build the plugin with `mvn clean package` (or take the build from Jenkins).
 2. Copy `target/pelltech.jar` into the `plugins` folder of STEM.
-3. Fill the database tables described below and start STEM (plugins are only loaded at startup).
+3. Start STEM. Missing database tables are created automatically.
+4. Optional: give the entries meaningful names in the database (see below) and restart STEM.
 
 There is no `config.yml`.
 
@@ -42,13 +44,24 @@ There is no `config.yml`.
 
 ## Database
 
-The inlets, outlets and notifies are loaded once at startup from these tables:
+All tables are created automatically if they do not exist (MySQL/MariaDB). The inlets, outlets and notifies
+are loaded at startup from these tables:
 
-| Table                   | Columns used               |
-|-------------------------|----------------------------|
-| `addon_heater_inlets`   | `inlet_id`, `index`, `name` |
+| Table                   | Columns                      |
+|-------------------------|------------------------------|
+| `addon_heater_inlets`   | `inlet_id`, `index`, `name`  |
 | `addon_heater_outlets`  | `outlet_id`, `index`, `name` |
 | `addon_heater_notifies` | `notify_id`, `index`, `name` |
+
+When the CAN bus sends an index that is not in the table yet, it is added with a placeholder name such as
+`Inlet 7`. Rename it in the database and restart STEM to show a meaningful name:
+
+```sql
+UPDATE addon_heater_inlets SET name = 'Kesseltemperatur' WHERE `index` = 7;
+```
+
+The tables `addon_heater_inlets_data`, `addon_heater_outlets_data` and `addon_heater_notifies_data` are
+created for history data.
 
 `index` is the index used by the CAN bus bridge. Two indexes have a fixed meaning for the web API:
 inlet `3` is the water temperature, outlet `1` is the burner.

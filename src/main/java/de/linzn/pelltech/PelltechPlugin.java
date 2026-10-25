@@ -32,6 +32,7 @@ public class PelltechPlugin extends STEMPlugin {
     @Override
     public void onEnable() {
         this.dbLogger = new DBLogger();
+        this.dbLogger.createTables();
         this.heaterProcessor = new HeaterProcessor2();
         this.getStemApi().scheduler().registerCallback(new HeaterCallback());
         this.getStemApi().commands().register("heating", new HeatingCommand());

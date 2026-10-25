@@ -20,20 +20,22 @@ import org.json.JSONObject;
 
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Applies canbus data to the configured inlets, outlets and notifies.
+ * Indexes that are not in the database yet are added with a placeholder name that can be changed there.
  */
 public class HeaterProcessor2 {
-    private final List<Inlet> inletsList;
-    private final List<Outlet> outletsList;
-    private final List<Notify> notifiesList;
+    private final CopyOnWriteArrayList<Inlet> inletsList;
+    private final CopyOnWriteArrayList<Outlet> outletsList;
+    private final CopyOnWriteArrayList<Notify> notifiesList;
     private volatile Date date;
 
     public HeaterProcessor2() {
-        this.inletsList = List.copyOf(PelltechPlugin.pelltechPlugin.dbLogger.loadInlets());
-        this.outletsList = List.copyOf(PelltechPlugin.pelltechPlugin.dbLogger.loadOutlets());
-        this.notifiesList = List.copyOf(PelltechPlugin.pelltechPlugin.dbLogger.loadNotifies());
+        this.inletsList = new CopyOnWriteArrayList<>(PelltechPlugin.pelltechPlugin.dbLogger.loadInlets());
+        this.outletsList = new CopyOnWriteArrayList<>(PelltechPlugin.pelltechPlugin.dbLogger.loadOutlets());
+        this.notifiesList = new CopyOnWriteArrayList<>(PelltechPlugin.pelltechPlugin.dbLogger.loadNotifies());
     }
 
     public synchronized void process(JSONObject rawJsonObject) {
@@ -61,12 +63,13 @@ public class HeaterProcessor2 {
             int index = jsonInlet.optInt("index");
             boolean health = jsonInlet.optString("state").equalsIgnoreCase("OK");
             double value = jsonInlet.optDouble("value", 0D);
-            for (Inlet inlet : inletsList) {
-                if (inlet.getIndex() == index) {
-                    inlet.update(health, value);
-                    break;
-                }
+            Inlet inlet = inletsList.stream().filter(entry -> entry.getIndex() == index).findFirst().orElse(null);
+            if (inlet == null) {
+                inlet = new Inlet(index, "Inlet " + index);
+                PelltechPlugin.pelltechPlugin.dbLogger.registerInlet(inlet);
+                inletsList.add(inlet);
             }
+            inlet.update(health, value);
         }
     }
 
@@ -78,12 +81,13 @@ public class HeaterProcessor2 {
             }
             int index = jsonOutlet.optInt("index");
             boolean active = jsonOutlet.optString("value").equalsIgnoreCase("EIN");
-            for (Outlet outlet : outletsList) {
-                if (outlet.getIndex() == index) {
-                    outlet.update(active);
-                    break;
-                }
+            Outlet outlet = outletsList.stream().filter(entry -> entry.getIndex() == index).findFirst().orElse(null);
+            if (outlet == null) {
+                outlet = new Outlet(index, "Outlet " + index);
+                PelltechPlugin.pelltechPlugin.dbLogger.registerOutlet(outlet);
+                outletsList.add(outlet);
             }
+            outlet.update(active);
         }
     }
 
@@ -95,12 +99,13 @@ public class HeaterProcessor2 {
             }
             int index = jsonNotifies.optInt("index");
             boolean active = jsonNotifies.optString("state").equalsIgnoreCase("EIN");
-            for (Notify notify : notifiesList) {
-                if (notify.getIndex() == index) {
-                    notify.update(active);
-                    break;
-                }
+            Notify notify = notifiesList.stream().filter(entry -> entry.getIndex() == index).findFirst().orElse(null);
+            if (notify == null) {
+                notify = new Notify(index, "Notify " + index);
+                PelltechPlugin.pelltechPlugin.dbLogger.registerNotify(notify);
+                notifiesList.add(notify);
             }
+            notify.update(active);
         }
     }
 

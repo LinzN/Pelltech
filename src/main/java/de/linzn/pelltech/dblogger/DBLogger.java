@@ -21,6 +21,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,6 +30,73 @@ import java.util.List;
  * connections are always released.
  */
 public class DBLogger {
+
+    private static final String[] SCHEMA = {
+            """
+            CREATE TABLE IF NOT EXISTS `addon_heater_inlets` (
+              `inlet_id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+              `index` INT NOT NULL,
+              `name` VARCHAR(128) NOT NULL,
+              UNIQUE KEY `uk_addon_heater_inlets_index` (`index`)
+            ) DEFAULT CHARSET=utf8mb4""",
+            """
+            CREATE TABLE IF NOT EXISTS `addon_heater_outlets` (
+              `outlet_id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+              `index` INT NOT NULL,
+              `name` VARCHAR(128) NOT NULL,
+              UNIQUE KEY `uk_addon_heater_outlets_index` (`index`)
+            ) DEFAULT CHARSET=utf8mb4""",
+            """
+            CREATE TABLE IF NOT EXISTS `addon_heater_notifies` (
+              `notify_id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+              `index` INT NOT NULL,
+              `name` VARCHAR(128) NOT NULL,
+              UNIQUE KEY `uk_addon_heater_notifies_index` (`index`)
+            ) DEFAULT CHARSET=utf8mb4""",
+            """
+            CREATE TABLE IF NOT EXISTS `addon_heater_inlets_data` (
+              `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+              `inlet_id` INT NOT NULL,
+              `health` TINYINT NOT NULL,
+              `value` DOUBLE NOT NULL,
+              `timestamp` BIGINT NOT NULL,
+              INDEX `idx_addon_heater_inlets_data` (`inlet_id`, `timestamp`)
+            ) DEFAULT CHARSET=utf8mb4""",
+            """
+            CREATE TABLE IF NOT EXISTS `addon_heater_outlets_data` (
+              `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+              `outlet_id` INT NOT NULL,
+              `active` TINYINT NOT NULL,
+              `timestamp` BIGINT NOT NULL,
+              INDEX `idx_addon_heater_outlets_data` (`outlet_id`, `timestamp`)
+            ) DEFAULT CHARSET=utf8mb4""",
+            """
+            CREATE TABLE IF NOT EXISTS `addon_heater_notifies_data` (
+              `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+              `notify_id` INT NOT NULL,
+              `active` TINYINT NOT NULL,
+              `timestamp` BIGINT NOT NULL,
+              INDEX `idx_addon_heater_notifies_data` (`notify_id`, `timestamp`)
+            ) DEFAULT CHARSET=utf8mb4"""
+    };
+
+    /**
+     * Create missing tables. Existing tables are not changed.
+     */
+    public void createTables() {
+        try {
+            PelltechPlugin.pelltechPlugin.getStemApi().data().withConnection(connection -> {
+                try (Statement statement = connection.createStatement()) {
+                    for (String sql : SCHEMA) {
+                        statement.execute(sql);
+                    }
+                }
+                return null;
+            });
+        } catch (SQLException e) {
+            PelltechPlugin.pelltechPlugin.getPluginLogger().error("Could not create database tables", e);
+        }
+    }
 
     private interface RowMapper<T> {
         T map(ResultSet rs) throws SQLException;
@@ -87,6 +155,30 @@ public class DBLogger {
             try (ResultSet rs = st.executeQuery()) {
                 return rs.next() ? rs.getInt(idColumn) : -1;
             }
+        }
+    }
+
+    public void registerInlet(Inlet inlet) {
+        this.register("addon_heater_inlets", "inlet_id", inlet.getIndex(), inlet.getName());
+    }
+
+    public void registerOutlet(Outlet outlet) {
+        this.register("addon_heater_outlets", "outlet_id", outlet.getIndex(), outlet.getName());
+    }
+
+    public void registerNotify(Notify notify) {
+        this.register("addon_heater_notifies", "notify_id", notify.getIndex(), notify.getName());
+    }
+
+    /**
+     * Store an entry the CAN bus sent but the database does not know yet.
+     */
+    private void register(String table, String idColumn, int index, String name) {
+        try {
+            PelltechPlugin.pelltechPlugin.getStemApi().data().withConnection(connection -> resolveId(connection, table, idColumn, index, name));
+            PelltechPlugin.pelltechPlugin.getPluginLogger().info("New entry in " + table + ": index " + index + " as '" + name + "'");
+        } catch (SQLException e) {
+            PelltechPlugin.pelltechPlugin.getPluginLogger().error("Could not register index " + index + " in " + table, e);
         }
     }
 
